@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>地震預警系統</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""/>
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="status-bar">
+                <div class="status-info">
+                    <i class="bi bi-clock"></i>
+                    <span id="current-time">00:00:00</span>
+                </div>
+                <div class="status-info">
+                    <span id="connection-status" class="online"><i class="bi bi-wifi"></i> 已連線</span>
+                </div>
+            </div>
+            <h1><i class="bi bi-shield-fill-exclamation"></i> <span>地震預警系統</span></h1>
+        </header>
+
+        <main class="main-content">
+            <div class="page active" id="home-page">
+                <div class="status-card">
+                    <div class="status-icon safe">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <div class="status-text">
+                        <h2>目前狀態</h2>
+                        <p id="current-status">安全 - 無地震警報</p>
+                    </div>
+                </div>
+
+                <div class="info-cards">
+                    <div class="info-card">
+                        <div class="info-card-header">
+                            <i class="bi bi-geo-alt-fill"></i>
+                            <h3>您的位置</h3>
+                        </div>
+                        <div class="info-card-content">
+                            <div class="status-info">
+                                <i class="bi bi-geo-alt"></i>
+                                <span id="user-location">定位中...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-card-header">
+                            <i class="bi bi-clipboard2-data-fill"></i>
+                            <h3>今日地震數據</h3>
+                        </div>
+                        <div class="info-card-content">
+                            <p><i class="bi bi-activity"></i> <span id="today-earthquakes">0</span> 次地震記錄</p>
+                            <p><i class="bi bi-graph-up"></i> 最大震度：<span id="max-intensity">-</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quick-actions">
+                    <button class="action-button" data-page="eew">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <span>地震預警</span>
+                    </button>
+                    <button class="action-button" data-page="reports">
+                        <i class="bi bi-journal-text"></i>
+                        <span>地震報告</span>
+                    </button>
+                    <button class="action-button" data-page="settings">
+                        <i class="bi bi-gear-fill"></i>
+                        <span>設置</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="page" id="eew-page">
+                <div class="page-header">
+                    <h2><i class="bi bi-exclamation-circle"></i> 地震預警</h2>
+                </div>
+                <div class="eew-status">
+                    <div class="eew-indicator" id="eew-status-indicator">
+                        <div class="indicator-circle safe"></div>
+                        <p>目前無地震預警</p>
+                    </div>
+                    <div class="eew-map" id="eew-map">
+                        <div id="map-container" class="map-container"></div>
+                        <div class="map-overlay">
+                            <div class="overlay-controls">
+                                <button class="map-type-toggle" id="toggle-map-type">
+                                    <i class="bi bi-layers-half"></i>
+                                    <span>切換地圖類型</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="eew-info">
+                        <div class="info-row">
+                            <span class="info-label"><i class="bi bi-graph-up"></i> 預計震度</span>
+                            <span class="info-value" id="expected-intensity">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label"><i class="bi bi-clock-history"></i> 預計到達時間</span>
+                            <span class="info-value" id="arrival-time">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label"><i class="bi bi-geo-alt-fill"></i> 震央位置</span>
+                            <span class="info-value" id="epicenter-location">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label"><i class="bi bi-rulers"></i> 地震規模</span>
+                            <span class="info-value" id="earthquake-magnitude">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 受影響地區列表 -->
+                <div class="affected-areas">
+                    <h3><i class="bi bi-pin-map-fill"></i> 可能受影響地區</h3>
+                    <div id="affected-areas-list" class="areas-list">
+                        <div class="empty-state">
+                            <i class="bi bi-geo"></i>
+                            <p>目前無受影響地區資料</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="safety-tips">
+                    <h3><i class="bi bi-info-circle-fill"></i> 地震安全提示</h3>
+                    <ul>
+                        <li><i class="bi bi-check-circle"></i> 保持冷靜，不要驚慌</li>
+                        <li><i class="bi bi-check-circle"></i> 躲在堅固的桌子底下</li>
+                        <li><i class="bi bi-check-circle"></i> 遠離窗戶和外牆</li>
+                        <li><i class="bi bi-check-circle"></i> 地震後檢查瓦斯和水管</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="page" id="reports-page">
+                <div class="page-header">
+                    <h2><i class="bi bi-clipboard-data"></i> 地震報告</h2>
+                </div>
+                <div class="filter-bar">
+                    <select id="time-filter">
+                        <option value="today">今日</option>
+                        <option value="week">本週</option>
+                        <option value="month">本月</option>
+                    </select>
+                    <select id="magnitude-filter">
+                        <option value="all">所有規模</option>
+                        <option value="3">3級以上</option>
+                        <option value="5">5級以上</option>
+                    </select>
+                    <button id="filter-button"><i class="bi bi-funnel-fill"></i> 篩選</button>
+                </div>
+                <div class="reports-list" id="earthquake-reports">
+                    <!-- 地震報告將透過 JavaScript 動態添加 -->
+                    <div class="empty-state">
+                        <i class="bi bi-search"></i>
+                        <p>無地震記錄</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="page" id="settings-page">
+                <div class="page-header">
+                    <h2><i class="bi bi-sliders"></i> 設置</h2>
+                </div>
+                <div class="settings-list">
+                    <div class="settings-group">
+                        <h3><i class="bi bi-bell-fill"></i> 通知設置</h3>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <span>地震預警通知</span>
+                                <p class="setting-description">接收即時地震預警通知</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="eew-notifications" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <span>最小震度閾值</span>
+                                <p class="setting-description">僅接收超過此震度的地震通知</p>
+                            </div>
+                            <select id="intensity-threshold">
+                                <option value="1">1級</option>
+                                <option value="2">2級</option>
+                                <option value="3" selected>3級</option>
+                                <option value="4">4級</option>
+                                <option value="5">5級</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <h3><i class="bi bi-palette-fill"></i> 顯示設置</h3>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <span>深色模式</span>
+                                <p class="setting-description">使用深色主題顯示</p>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="dark-mode">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <span>預設地圖</span>
+                                <p class="setting-description">選擇地震地圖顯示模式</p>
+                            </div>
+                            <select id="map-type">
+                                <option value="terrain" selected>地形圖</option>
+                                <option value="satellite">衛星圖</option>
+                                <option value="simple">簡易圖</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3><i class="bi bi-info-circle-fill"></i> 關於</h3>
+                        <div class="setting-item about-info">
+                            <p>地震預警系統 v1.0.0</p>
+                            <p>資料來源：中央氣象局</p>
+                            <p>© 2023 地震預警系統</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <nav class="nav-bar">
+            <button class="nav-button active" data-page="home">
+                <i class="bi bi-house-fill"></i>
+                <span>首頁</span>
+            </button>
+            <button class="nav-button" data-page="eew">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <span>預警</span>
+            </button>
+            <button class="nav-button" data-page="reports">
+                <i class="bi bi-journal-text"></i>
+                <span>報告</span>
+            </button>
+            <button class="nav-button" data-page="settings">
+                <i class="bi bi-gear-fill"></i>
+                <span>設置</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- 地理位置工具函數 -->
+    <script src="js/geo-utils.js"></script>
+    <!-- 主應用程式 -->
+    <script src="js/app.js"></script>
+</body>
+</html> 
